@@ -1,0 +1,26 @@
+{
+  "nodes": {
+    "parsec": {
+      "locked": {
+        "lastModified": 1668890541,
+        "narHash": "sha256-I6ZODAu2aSVr8xiBVewefQQL12wOrTGnLKhX3GFFCwM=",
+        "owner": "milahu",
+        "repo": "nix-parsec",
+        "rev": "34dea7a47fc49b45bf965eba660250b86312707d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "milahu",
+        "repo": "nix-parsec",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "parsec": "parsec"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
