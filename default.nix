@@ -2,7 +2,10 @@
 
 let
     inherit (builtins)
-        foldl' mapAttrs attrValues;
+        foldl' mapAttrs attrValues
+        throw addErrorContext
+        isFunction isAttrs
+        ;
 
     # fix : (a -> a) -> a
     fix = f: let x = f x; in x;
@@ -15,6 +18,8 @@ let
     # mapAttrVals : (a -> b) -> Set a -> Set b
     mapAttrVals = fn: mapAttrs (_: fn);
 
+	throwIf = cond: msg: val: if cond then throw msg else val;
+	throwIfNot = cond: throwIf (!cond);
 
     # Mod = { * } -> Set
     # callMod' : Set -> Set -> (Mod -> Set) -> Set -> Set
@@ -23,12 +28,31 @@ let
 
     	res = mod args';
     in
-    	res;
+    	addErrorContext
+    		"while evaluating a library module" (
+    	throwIfNot (isFunction mod)
+    		"expected module to be a function" (
+    	throwIfNot (isAttrs res)
+			"expected module to return an attribute set"
+			res
+		));
+
+	importPath = call: path: let
+		res = call (import path) { };
+	in
+		addErrorContext
+			"while importing a library module at ${path}" (
+		throwIfNot (res ? exports)
+			"expected module output to contain an attr named `exports`" (
+		throwIfNot (isFunction res.exports)
+			"expected attr `exports` to contain a function"
+			res
+		));
 
     # using' : ((Mod -> Set) -> Set -> Set) -> Set Path -> (Set -> Set) -> Set
     using' = call: inputs: fn: let
         # importMod : Path -> Set
-        importMod = path: call (import path) { };
+        importMod = importPath call;
 
         # getExports : Set -> Set
         getExports = mod: mod.exports mod;

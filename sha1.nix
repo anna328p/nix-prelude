@@ -1,7 +1,7 @@
 { self, ... }:
 
 {
-	exports = self: { inherit (self)
-		;
-	};
+ 	exports = self: { inherit (self)
+ 		;
+ 	};
 }
