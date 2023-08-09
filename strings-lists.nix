@@ -6,7 +6,7 @@ with L; let
         isList length elemAt genList
         isString stringLength substring
         getAttr
-        foldl' concatLists
+        foldl' concatLists filter
         concatStringsSep
         all
         ;
@@ -24,6 +24,9 @@ in rec {
         leftPadStr rightPadStr
 
         sliceListN sliceStrN
+        spansOf
+        mapCons
+        mapPairs mapPairs'
 
         addStrings
         concatStrings
@@ -36,6 +39,8 @@ in rec {
         charToInt
 
         findIndex find
+        filterIndices
+        splitOn
 
         optionals optional
         flatten
@@ -47,10 +52,10 @@ in rec {
     # addLists : [a] -> [a] -> [a]
     addLists = a: b: a ++ b;
 
-    # addStrings : Str -> Str -> Str
+    # addStrings : String -> String -> String
     addStrings = a: b: a + b;
 
-    # sublist : Int -> Int -> List -> List
+    # sublist : Int -> Int -> [a] -> [a]
     sublist = start: count: list: let
         len = length list;
 
@@ -236,6 +241,31 @@ in rec {
         getSlice = substring;
     };
 
+    # mapCons : Int w -> (Tuple w a -> b) -> [a] -> [b]
+    mapCons = width: fn: list: let
+		len = length list;
+		mkSpan = start: genList (i: elemAt list (start + i)) width;
+	in
+		assert isNat width;
+		assert isList list;
+		assert len >= width;
+
+		genList (o fn mkSpan) (len - width + 1);
+
+	# spansOf
+	#
+	# spansOf 2 [ 1 2 3 4 ] => [ [ 1 2 ] [ 2 3 ] [ 3 4 ] ]
+	# spansOf 3 [ 1 2 3 4 ] => [ [ 1 2 3 ] [ 2 3 4 ] ]
+
+	# spansOf : Int -> [a] -> [[a]]
+	spansOf = flip mapCons id;
+
+    # mapPairs : ((a, a) -> b) -> [a] -> [b]
+    mapPairs = mapCons 2;
+
+    # mapPairs' : (a -> a -> b) -> [a] -> [b]
+    mapPairs' = o mapPairs uncurry;
+
     concatStrings = concatStringsSep "";
 
     # concatMapStringsSep : Str -> (Str -> Str) -> [Str] -> Str
@@ -299,6 +329,49 @@ in rec {
         if ix != null
             then elemAt list ix
             else null;
+
+    # filterIndices : (a -> Bool) -> [a] -> [Nat]
+    filterIndices = pred: list: let
+    	optionalIndex = ix:
+    		if pred (elemAt list ix)
+    			then ix
+    			else null;
+
+    	ixs = genList optionalIndex (length list);
+    in
+    	assert isLambda pred;
+    	assert isList list;
+
+    	filter isInt ixs;
+
+	# splitOn
+	#
+	# Divides a list into a list of lists, "cutting" where a predicate matches.
+	# The delimiting elements are dropped.
+	# Examples:
+	# splitOn isNull [ 1 2 3 null 4 5 ] => [ [ 1 2 3 ] [ 4 5 ] ]
+	# splitOn isNull [ null 1 null null 2 null ] => [ [] [ 1 ] [] [ 2 ] [] ]
+
+    # splitOn : (a -> Bool) -> [a] -> [[a]]
+    splitOn = pred: list: let
+    	len = length list;
+
+    	ixs = filterIndices pred list;
+    	ixs' = concatLists [ [ (-1) ] ixs [ len ] ];
+
+		getSlice = left: right:
+			genList
+				(i: elemAt list (left + i + 1))
+				(right - left - 1);
+
+    	spans = mapPairs' getSlice ixs';
+    in
+    	assert isLambda pred;
+    	assert isList list;
+
+		if len == 0
+			then list
+			else spans;
 
     # optionals : Bool -> [a] -> [a];
     optionals = testRes: arg:
