@@ -1,6 +1,6 @@
-{ L, ... }:
+{ self, ... }:
 
-with L; let
+with self; let
 	inherit (builtins)
 		isList length elemAt genList all
 		isInt isFunction

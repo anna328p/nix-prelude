@@ -1,4 +1,4 @@
-{ L, parsec, ... }:
+{ self, parsec, ... }:
 
 let
     inherit (builtins)
@@ -9,12 +9,12 @@ let
 
     parsec-xml = import ./contrib/parse-xml.nix {
         nix-parsec = parsec;
-        inherit L;
+        L = self;
     };
 
     inherit (parsec-xml) parseXml;
 
-in with L; rec {
+in with self; rec {
     exports = self: { inherit (self) 
         hasEllipsis
         hasFormals

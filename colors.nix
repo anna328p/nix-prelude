@@ -1,6 +1,6 @@
-{ L, ... }:
+{ self, ... }:
 
-with L; rec {
+with self; rec {
     exports = self: { inherit (self)
         prefixHash genDecls genVarDecls byKind;
     };

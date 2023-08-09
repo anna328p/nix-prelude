@@ -1,4 +1,4 @@
-{ L, ... }:
+{ self, ... }:
 
 let
     inherit (builtins)
@@ -10,7 +10,7 @@ let
         zipAttrsWith
         ;
 
-in with L; rec {
+in with self; rec {
     exports = self: { inherit (self)
         isSet
 

@@ -1,4 +1,4 @@
-{ L, ... }:
+{ self, ... }:
 
 let
     inherit (builtins)
@@ -11,7 +11,7 @@ let
         concatStringsSep toJSON
         addErrorContext
         ;
-in with L; rec {
+in with self; rec {
     exports = self: { inherit (self)
         toLuaLiteral
         ;

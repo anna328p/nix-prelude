@@ -1,6 +1,6 @@
-{ L, ... }:
+{ self, ... }:
 
-with L; let
+with self; let
 	inherit (builtins)
 		isInt
 		;

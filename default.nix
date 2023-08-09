@@ -19,9 +19,11 @@ let
     # Mod = { * } -> Set
     # callMod' : Set -> Set -> (Mod -> Set) -> Set -> Set
     callMod' = self: defaultArgs: mod: args: let
-        args' = { L = self; } // defaultArgs // args;
-    in mod args';
+        args' = { inherit self; } // defaultArgs // args;
 
+    	res = mod args';
+    in
+    	res;
 
     # using' : ((Mod -> Set) -> Set -> Set) -> Set Path -> (Set -> Set) -> Set
     using' = call: inputs: fn: let
@@ -65,12 +67,15 @@ in mkLibrary {
         strings-lists = ./strings-lists.nix;
         tuples = ./tuples.nix;
         sets = ./sets.nix;
-        colors = ./colors.nix;
-        _urlencode = ./urlencode.nix;
-        base64 = ./base64.nix;
-        misc = ./misc.nix;
 
         introspection = ./introspection.nix;
+
+        _urlencode = ./urlencode.nix;
+        base64 = ./base64.nix;
+        sha1 = ./sha1.nix;
+
+        colors = ./colors.nix;
+        misc = ./misc.nix;
 
         lua = ./lua.nix;
     } (_: {})
