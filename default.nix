@@ -96,7 +96,8 @@ in mkLibrary {
 
         _urlencode = ./urlencode.nix;
         base64 = ./base64.nix;
-        sha1 = ./sha1.nix;
+        prng = ./prng.nix;
+        hashes = ./hashes.nix;
 
         colors = ./colors.nix;
         misc = ./misc.nix;

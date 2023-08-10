@@ -296,7 +296,7 @@ in rec {
     mapStringChars = o imapStringChars const;
     
     # asciiTable : Dict Int
-    asciiTable = import ./ascii-table.nix;
+    asciiTable = import data/ascii-table.nix;
 
     # isChar : Str -> Bool
     isChar = c: isString c && (stringLength c) == 1;

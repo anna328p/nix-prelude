@@ -10,7 +10,8 @@ in {
 	    isPositiveInt isNegativeInt
 	    isNat
 		min max modulo abs
-		pow ceilDiv
+		pow pow2 ceilDiv
+		shiftLeft shiftRight
 		;
 	};
 
@@ -50,6 +51,8 @@ in {
 			base
 		else
 			base * (pow base (exp - 1));
+
+	pow2 = import data/pow2.nix;
 	
 	# ceilDiv : Int -> Int -> Int
 	ceilDiv = a: b: let
@@ -61,4 +64,28 @@ in {
 		if (quotient * b) < a
 			then quotient + 1
 			else quotient;
+
+	# shiftRight : Int -> Int -> Int
+	shiftRight = x: n:
+		assert isInt x;
+		assert isInt n;
+
+		if n < 0 then
+			shiftLeft x (-1 * n) 
+		else if n > 63 then
+			if x >= 0 then 0 else (-1)
+		else
+			x / (pow2 n);
+
+	# shiftLeft : Int -> Int -> Int
+	shiftLeft = x: n:
+		assert isInt x;
+		assert isInt n;
+
+		if n < 0 then
+			shiftRight x (-1 * n)
+		else if n > 63 then
+			0
+		else
+			x * (pow2 n);
 }
