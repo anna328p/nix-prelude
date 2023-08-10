@@ -4,6 +4,7 @@ with self; let
     inherit (builtins)
         isInt
         isList length elemAt genList
+        head tail
         isString stringLength substring
         getAttr
         foldl' concatLists filter
@@ -46,6 +47,8 @@ in rec {
         flatten
 
         lengthsEq stringLengthsEq
+
+        foldl1
         ;
     };
 
@@ -397,4 +400,11 @@ in rec {
 
     lengthsEq = genericLengthsEq length;
     stringLengthsEq = genericLengthsEq stringLength;
+
+    # foldl1 : (b -> a -> b) -> [a] -> b
+    foldl1 = fn: list:
+    	assert isLambda fn;
+    	assert isList list;
+    	assert (length list) >= 1;
+    	foldl' fn (head list) (tail list);
 }
