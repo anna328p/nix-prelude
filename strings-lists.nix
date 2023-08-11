@@ -43,6 +43,8 @@ in rec {
         filterIndices
         splitOn
 
+        replaceAt
+
         optionals optional
         flatten
 
@@ -375,6 +377,20 @@ in rec {
 		if len == 0
 			then list
 			else spans;
+
+	# replaceAt : [a] -> Nat -> a -> [a]
+	replaceAt = xs: index: val: let
+		len = length xs;
+
+		fn = i: if i == index
+			then val
+			else elemAt xs i;
+	in
+		assert isList xs;
+		assert isPositiveInt index;
+		assert index < len;
+
+		genList fn len;
 
     # optionals : Bool -> [a] -> [a];
     optionals = testRes: arg:
