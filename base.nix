@@ -46,7 +46,7 @@ in rec {
     compose2 = oo;
 
     # pipe : a -> [ (a -> b) (b -> c) ... (d -> e) ] -> e 
-    pipe = foldl' id;
+    pipe = foldl' (flip id);
 
     # pipe' : [ (a -> b) (b -> c) ... (d -> e) ] -> a -> e 
     pipe' = foldl' (flip compose) id;
