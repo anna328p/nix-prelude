@@ -4,6 +4,7 @@ let
     inherit (builtins)
         foldl'
         isFunction isAttrs
+        seq deepSeq
         ;
 
 in rec {
@@ -12,6 +13,8 @@ in rec {
         compose o compose2 oo
         pipe pipe'
         fix
+
+        force
 
         isLambda
 
@@ -50,6 +53,13 @@ in rec {
 
     # fix : (a -> a) -> a
     fix = f: let x = f x; in x;
+
+    # side effect: forces evaluation of a
+    # force : a -> a
+    force = x: seq x x;
+
+    # deepForce : a -> a
+    deepForce = x: deepSeq x x;
 
     # isLambda : Any -> Bool
     isLambda = v:

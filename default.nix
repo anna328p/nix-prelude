@@ -93,6 +93,7 @@ in mkLibrary {
         sets = ./sets.nix;
 
         introspection = ./introspection.nix;
+        debugging = ./debugging.nix;
 
         _urlencode = ./urlencode.nix;
         base64 = ./base64.nix;
