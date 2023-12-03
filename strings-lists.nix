@@ -53,6 +53,8 @@ in rec {
         lengthsEq stringLengthsEq
 
         foldl1
+        sum
+        product
         ;
     };
 
@@ -430,4 +432,10 @@ in rec {
     	assert isList list;
     	assert (length list) >= 1;
     	foldl' fn (head list) (tail list);
+
+    # sum : [Int] -> Int
+    sum = foldl' __add 0;
+
+    # product : [Int] -> Int
+    product = foldl' __mul 1;
 }
