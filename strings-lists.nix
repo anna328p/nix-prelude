@@ -5,7 +5,7 @@ with self; let
         isInt
         isList length elemAt genList
         head tail
-        isString stringLength substring
+        isString stringLength substring split
         getAttr
         foldl' concatLists filter
         concatStringsSep
@@ -27,7 +27,7 @@ in rec {
         sliceListN sliceStrN
         spansOf
         mapCons
-        mapPairs mapPairs'
+        mapConsPairs mapConsPairs'
 
         addStrings
         concatStrings
@@ -42,6 +42,8 @@ in rec {
         findIndex find
         filterIndices
         splitOn
+
+        lines
 
         replaceAt
 
@@ -265,11 +267,11 @@ in rec {
 	# spansOf : Int -> [a] -> [[a]]
 	spansOf = flip mapCons id;
 
-    # mapPairs : ((a, a) -> b) -> [a] -> [b]
-    mapPairs = mapCons 2;
+    # mapConsPairs : ((a, a) -> b) -> [a] -> [b]
+    mapConsPairs = mapCons 2;
 
-    # mapPairs' : (a -> a -> b) -> [a] -> [b]
-    mapPairs' = o mapPairs uncurry;
+    # mapConsPairs' : (a -> a -> b) -> [a] -> [b]
+    mapConsPairs' = o mapConsPairs uncurry;
 
     concatStrings = concatStringsSep "";
 
@@ -369,7 +371,7 @@ in rec {
 				(i: elemAt list (left + i + 1))
 				(right - left - 1);
 
-    	spans = mapPairs' getSlice ixs';
+    	spans = mapConsPairs' getSlice ixs';
     in
     	assert isLambda pred;
     	assert isList list;
@@ -377,6 +379,11 @@ in rec {
 		if len == 0
 			then list
 			else spans;
+
+	# lines : Str -> [Str]
+	lines = str:
+		assert isString str;
+		filter isString (split "[\r\n]+" str);
 
 	# replaceAt : [a] -> Nat -> a -> [a]
 	replaceAt = xs: index: val: let
