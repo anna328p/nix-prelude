@@ -12,5 +12,5 @@ with self; rec {
 
     genVarDecls = genDecls (k: v: "--${k}: ${v} !important;");
 
-    byKind = kind: light: dark: { inherit light dark; }.${kind};
+    byVariant = variant: light: dark: { inherit light dark; }.${variant};
 }
