@@ -5,6 +5,8 @@ let
         toXML
         isFunction
         foldl'
+        match
+        head
         ;
 
     parsec-xml = import ./contrib/parse-xml.nix {
@@ -28,13 +30,15 @@ in with self; rec {
 
     dig = foldl' findChild;
 
+    matchXML = re: obj: match re (toXML obj);
+
     # Return values:
     # true  : function with set pattern, with ellipsis
     # false : function with set pattern, without ellipsis
     # null  : function without set pattern
 
-    # hasEllipsis : (a -> b) -> (Bool | Null)
-    hasEllipsis = f: let
+    # hasEllipsis' : (a -> b) -> (Bool | Null)
+    hasEllipsis' = f: let
         parseRes = describe f;
         attrspat = dig parseRes.value [ "expr" "function" "attrspat" ];
     in
@@ -45,14 +49,34 @@ in with self; rec {
         else
             (attrspat.attributes.ellipsis or null) == "1";
 
-    hasFormals = f: let
+    hasEllipsis = f: let
+    	re = ".*<function>.*<attrspat(.+ellipsis=\"1\"|).*";
+
+    	matchRes = matchXML re f;
+    in
+        assert isFunction f;
+
+        if matchRes == null then
+            null
+        else
+            (head matchRes) != "";
+
+    hasFormals' = f: let
         parseRes = describe f;
         attrspat = dig parseRes.value [ "expr" "function" "attrspat" ];
     in
         assert isFunction f;
         attrspat != null;
 
-    lambdaArgName = f: let
+    hasFormals = f: let
+    	re = ".*<function>.*<attrspat>.*";
+
+		matchRes = matchXML re f;
+    in
+        assert isFunction f;
+        matchRes != null;
+
+    lambdaArgName' = f: let
         parseRes = describe f;
         varpat = dig parseRes.value [ "expr" "function" "varpat" ];
     in
@@ -62,4 +86,16 @@ in with self; rec {
             null
         else
             (varpat.attributes.name or "");
+
+    lambdaArgName = f: let
+    	re = ".*<function>.*<varpat.+name=\"(.+)\".*";
+
+    	matchRes = matchXML re f;
+    in
+        assert isFunction f;
+
+        if matchRes == null then
+            null
+        else
+            head matchRes;
 }

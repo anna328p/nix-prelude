@@ -100,7 +100,6 @@ in mkLibrary {
         prng = ./prng.nix;
         hashes = ./hashes.nix;
 
-        colors = ./colors.nix;
         misc = ./misc.nix;
 
         lua = ./lua.nix;
