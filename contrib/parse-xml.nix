@@ -1,249 +1,203 @@
 # MIT license
-# from https://github.com/milahu/nix-parsec
+# originally based on https://github.com/milahu/nix-parsec
 
 /*
-  xml parser
-  based on
-  https://github.com/unhammer/tree-sitter-xml
-  https://github.com/dorgnarg/tree-sitter-xml
-  https://github.com/tree-sitter/tree-sitter-html
+	xml parser
+	based on
+	https://github.com/unhammer/tree-sitter-xml
+	https://github.com/dorgnarg/tree-sitter-xml
+	https://github.com/tree-sitter/tree-sitter-html
 
-  TODO decode entities like &#10; -> \n
-  TODO encode entities like \n -> &#10;
-  TODO xpath selector parser + compiler
-  TODO css selector parser + compiler
+	TODO decode entities like &#10; -> \n
+	TODO encode entities like \n -> &#10;
+	TODO xpath selector parser + compiler
+	TODO css selector parser + compiler
 */
 
 { nix-parsec, L, ... }:
 
 let
-  inherit (nix-parsec) lexer;
-in
+	inherit (builtins)
+		elemAt
+		stringLength substring
+		match
+		;
 
-with builtins;
-with nix-parsec.parsec;
+	inherit (nix-parsec) lexer;
 
-let
-  # TODO bind all values from doctype
-  inherit (import ./parse-xml-doctype.nix { inherit nix-parsec Name Space lexeme; }) DoctypeDeclaration;
+	inherit (nix-parsec.parsec)
+		runParser
+		bind pure
 
-  isSpace = c: c == " " || c == "\n" || c == "\t";
-  Space = skipWhile isSpace; # skipWhile: zero or more characters
-  Space1 = skipWhile1 isSpace; # skipWhile1: one or more characters
-  lexeme = lexer.lexeme Space;
-  symbol = lexer.symbol Space;
+		alt sequence optional many many1 choice
+		
+		skipWhile skipWhile1 takeWhile1
+		skipThen thenSkip
+		
+		string matching eof
+		;
 
-  concatStrings = parser: bind parser (values: pure (L.concatStrings values));
+	inherit (L)
+		pairsToSet
+		compact flatten
+		;
 
-  Element =
-    alt
-    EmptyTag
-    Tag
-  ;
+	# TODO bind all values from doctype
+	inherit (import ./parse-xml-doctype.nix {
+				inherit nix-parsec Name Space lexeme;
+			})
+		DoctypeDeclaration
+		;
 
-  Name =
-    let isChar = c: builtins.match "[a-zA-Z0-9_:-]" c != null; in
-    lexeme (takeWhile1 isChar)
-  ;
+	isSpace = c: c == " " || c == "\n" || c == "\t";
+	Space = skipWhile isSpace; # skipWhile: zero or more characters
+	Space1 = skipWhile1 isSpace; # skipWhile1: one or more characters
+	lexeme = lexer.lexeme Space;
+	symbol = lexer.symbol Space;
 
-  Hex =
-    let isChar = c: builtins.match "[0-9a-fA-F]" c != null; in
-    lexeme (takeWhile1 isChar)
-  ;
+	concatStrings = parser: bind parser (values: pure (L.concatStrings values));
 
-  #Digits = lexer.decimal;
-  Digits =
-    let isChar = c: builtins.match "[0-9]" c != null; in
-    lexeme (takeWhile1 isChar)
-  ;
+	Element =
+		alt
+		EmptyTag
+		Tag
+	;
 
-  # FIXME allow empty value?
-  CharData =
-    let isChar = c: builtins.match "[^<&]" c != null; in
-    lexeme (takeWhile1 isChar)
-  ;
+	doesMatch = pattern: str: match pattern str != null;
+	lexemeMatching1 = pat: lexeme (takeWhile1 (doesMatch pat));
 
-  # this can be anything
-  Chars =
-    let isChar = c: builtins.match "." c != null; in
-    lexeme (takeWhile1 isChar)
-  ;
+	Name = lexemeMatching1 "[a-zA-Z0-9_:-]";
 
-  # TODO rename to CharDataInDoubleQuotes
-  # FIXME allow empty value?
-  ValueChunkInDoubleQuotes =
-    let isChar = c: builtins.match "[^<&\"]" c != null; in
-    lexeme (takeWhile1 isChar)
-  ;
+	Hex = lexemeMatching1 "[0-9a-fA-F]";
 
-  # TODO rename to CharDataInSingleQuotes
-  # FIXME allow empty value?
-  ValueChunkInSingleQuotes =
-    let isChar = c: builtins.match "[^<&']" c != null; in
-    lexeme (takeWhile1 isChar)
-  ;
+	#Digits = lexer.decimal;
+	Digits = lexemeMatching1 "[0-9]";
 
-  EmptyTag =
-    bind
-    (
-      skipThen
-      (symbol "<") # skip
-      (
-        thenSkip
-        (
-          # TODO refactor: StartTag + EmptyTag
-          sequence [
-            Name
-            Attributes
-          ]
-        )
-        (sequence [ (optional Space) (string "/>") ]) # skip
-      )
-    )
-    # TODO refactor: StartTag + EmptyTag
-    (values: (pure {
-      # sorted by alphabet
-      attributes = setOfListList (builtins.elemAt values 1);
-      children = [];
-      name = builtins.elemAt values 0;
-      type = "tag";
-      nameClose = "";
-    }))
-  ;
+	# FIXME allow empty value?
+	CharData = lexemeMatching1 "[^<&]";
 
-  Tag = (bind
-    (sequence [
-      StartTag
-      #(optional CharData)
-      (optional Content)
-      EndTag
-    ])
-    (values: (pure (let
-      startTag = builtins.elemAt values 0;
-      name = builtins.elemAt startTag 0;
-      attributes = builtins.listToAttrs (builtins.map (keyval: {
-        name = builtins.elemAt keyval 0;
-        value = builtins.elemAt keyval 1;
-      }) (builtins.elemAt startTag 1));
-      children = builtins.elemAt (builtins.elemAt values 1) 0;
-      endTag = builtins.elemAt values 2;
-    in (
-      #assert (name == endTag);
-      if (name != endTag)
-      # TODO print source location
-      then throw "parse error: startTag != endTag: <${name}></${endTag}>"
-      else
-      {
-        inherit attributes children name;
-        nameClose = endTag; # debug
-        type = "tag";
-      }
-    ))))
-  );
+	# this can be anything
+	Chars = lexemeMatching1 ".";
 
-  StartTag =
-    skipThen
-    (symbol "<") # skip
-    (
-      thenSkip
-      (
-        # TODO refactor: StartTag + EmptyTag
-        sequence [
-          Name
-          Attributes
-        ]
-      )
-      (sequence [ (optional Space) (string ">") ]) # skip
-    )
-  ;
+	# TODO rename to CharDataInDoubleQuotes
+	# FIXME allow empty value?
+	ValueChunkInDoubleQuotes = lexemeMatching1 "[^<&\"]";
 
-  EndTag =
-    skipThen
-    (symbol "</") # skip
-    (
-      thenSkip
-      (
-        Name
-      )
-      (sequence [ (optional Space) (string ">") ]) # skip
-    )
-  ;
+	# TODO rename to CharDataInSingleQuotes
+	# FIXME allow empty value?
+	ValueChunkInSingleQuotes = lexemeMatching1 "[^<&']";
 
-  Attributes = (
-    many (
-      skipThen
-      Space # skip
-      Attribute
-    )
-  );
+	EmptyTag =
+		bind
+			(skipThen
+				(symbol "<") # skip
+				(thenSkip
+					(sequence [ # TODO refactor: StartTag + EmptyTag
+						Name
+						Attributes
+					])
+					(sequence [ (optional Space) (string "/>") ]))) # skip
 
-  Attribute = sequence [
-    Name # key
-    (
-      skipThen
-      (symbol "=") # skip
-      AttributeValue
-    )
-  ];
+			# TODO refactor: StartTag + EmptyTag
+			(values: pure {
+				# sorted by alphabet
+				attributes = pairsToSet (elemAt values 1);
+				children = [];
+				name = elemAt values 0;
+				type = "tag";
+				nameClose = "";
+			});
 
-  AttributeValue = (alt
-    # double quotes
-    (
-      skipThen
-      (symbol ''"'') # skip
-      (
-        thenSkip
-        (
-          concatStrings (many (
-            alt
-            ValueChunkInDoubleQuotes # /[^<&"]/
-            Reference
-          ))
-        )
-        (symbol ''"'') # skip
-      )
-    )
-    # single quotes
-    (
-      skipThen
-      (symbol "'") # skip
-      (
-        thenSkip
-        (
-          concatStrings (many (
-            alt
-            ValueChunkInSingleQuotes # /[^<&']/
-            Reference
-          ))
-        )
-        (symbol "'") # skip
-      )
-    )
-  );
+	Tag = bind
+		(sequence [
+			StartTag
+			#(optional CharData)
+			(optional Content)
+			EndTag
+		])
+		(values: pure (let
+			startTag   = elemAt values 0;
+			name       =     elemAt startTag 0;
+			attributes =     pairsToSet (elemAt startTag 1);
+			children   = elemAt (elemAt values 1) 0;
+			endTag     = elemAt values 2;
+		in
+			if (name != endTag) then
+				# TODO print source location
+				throw "parse error: startTag != endTag: <${name}></${endTag}>"
+			else {
+				inherit attributes children name;
+				nameClose = endTag; # debug
+				type = "tag";
+			}
+		));
 
-  Reference = (alt
-    EntityReference
-    CharacterReference
-  );
+	StartTag =
+		skipThen
+			(symbol "<") # skip
+			(thenSkip
+				# TODO refactor: StartTag + EmptyTag
+				(sequence [ Name Attributes ])
+				(sequence [ (optional Space) (string ">") ])); # skip
 
-  EntityReference = concatStrings (sequence [
-    (symbol "&") # TODO symbol or string
-    Name
-    (symbol ";")
-  ]);
+	EndTag =
+		skipThen
+			(symbol "</") # skip
+			(thenSkip
+				Name
+				(sequence [ (optional Space) (string ">") ]));
 
-  CharacterReference = (concatStrings (alt
-    (sequence [
-      (symbol "&#") # TODO symbol or string
-      Digits # /[0-9]+/
-      (symbol ";")
-    ])
-    (sequence [
-      (symbol "&#x") # TODO symbol or string
-      Hex # /[0-9a-fA-F]+/
-      (symbol ";")
-    ])
-  ));
+	Attributes = many (skipThen Space Attribute);
+
+	Attribute = sequence [
+		Name # key
+		(skipThen (symbol "=") AttributeValue)
+	];
+
+	AttributeValue = 
+		alt
+			# double quotes
+			(skipThen
+				(symbol ''"'') # skip
+				(thenSkip
+					(concatStrings (many
+						(alt
+							ValueChunkInDoubleQuotes # /[^<&"]/
+							Reference)))
+					(symbol ''"'') # skip
+				))
+			# single quotes
+			(skipThen
+				(symbol "'") # skip
+				(thenSkip
+					(concatStrings (many
+						(alt
+							ValueChunkInSingleQuotes # /[^<&']/
+							Reference)))
+					(symbol "'") # skip
+				));
+
+	Reference = alt EntityReference CharacterReference;
+
+	EntityReference = concatStrings (sequence [
+		(symbol "&") # TODO symbol or string
+		Name
+		(symbol ";")
+	]);
+
+	CharacterReference = 
+		concatStrings
+			(alt
+				(sequence [
+					(symbol "&#") # TODO symbol or string
+					Digits # /[0-9]+/
+					(symbol ";")
+				])
+				(sequence [
+					(symbol "&#x") # TODO symbol or string
+					Hex # /[0-9a-fA-F]+/
+					(symbol ";")
+				]));
 
   Content = many (
     choice [
@@ -257,188 +211,148 @@ let
     ]
   );
 
-  Text = (
-    bind
-    (
-      concatStrings (
-        many1 (
-          choice [
-            CharData
-            Reference
-          ]
-        )
-      )
-    )
-    (value: pure {
-      type = "text";
-      inherit value;
-      #children = [];
-    })
-  );
+	Text = bind
+		(concatStrings
+			(many1 (choice [ CharData Reference ])))
+		(value: pure {
+			type = "text";
+			inherit value;
+			#children = [];
+		});
 
-  /* not used
-  # Examine the next N characters without consuming them.
-  # Fails if there is not enough input left.
-  #   :: Parser String
-  peekN = n: ps:
-    let
-      str = builtins.elemAt ps 0;
-      offset = builtins.elemAt ps 1;
-      len = builtins.elemAt ps 2;
-    in if len >= n
-      then [(builtins.substring offset n str) offset len]
-      else {
-        context = "parsec.peekN";
-        msg = "expected ${n} characters";
-      };
-  */
+	/* not used
+	# Examine the next N characters without consuming them.
+	# Fails if there is not enough input left.
+	#   :: Parser String
+	peekN = n: ps: let
+		str = elemAt ps 0;
+		offset = elemAt ps 1;
+		len = elemAt ps 2;
+	in
+		if len >= n then
+			[(substring offset n str) offset len]
+		else {
+			context = "parsec.peekN";
+			msg = "expected ${n} characters";
+		};
+	*/
 
-  # Consume zero or more characters until the stop string,
-  # returning the consumed characters. Cannot fail.
-  # based on parsec.takeWhile
-  #   :: String -> Parser String
-  takeUntil = stop: ps:
-    let
-      str = elemAt ps 0;
-      valueStart = elemAt ps 1;
-      len = elemAt ps 2;
-      strLen = stringLength str;
-      stopLen = stringLength stop;
-      # Search for the next valueStart that violates the predicate
-      seekEnd = position:
-        if position >= strLen || (
-            let peekStop = substring position stopLen str; in
-            (peekStop == stop)
-          )
-          then position # break
-          else seekEnd (position + 1); # continue
-      valueEnd = seekEnd valueStart;
-      # The number of characters we found
-      valueLen = valueEnd - valueStart;
-      foundStop = let peekStop = substring valueEnd stopLen str; in
-        peekStop == stop;
-      value = substring valueStart valueLen str;
-      parseEnd = if foundStop then (valueEnd + stopLen) else valueEnd;
-      remain = if foundStop then (len - valueLen - stopLen) else (len - valueLen);
-    in [value parseEnd remain];
+	# Consume zero or more characters until the stop string,
+	# returning the consumed characters. Cannot fail.
+	# based on parsec.takeWhile
+	#   :: String -> Parser String
+	takeUntil = stop: ps: let
+		str = elemAt ps 0;
+		valueStart = elemAt ps 1;
+		len = elemAt ps 2;
 
-  Comment = (
-    bind
-    (
-      skipThen
-      (string "<!--") # skip
-      (takeUntil "-->")
-    )
-    (value: pure { type = "comment"; inherit value; })
-  );
+		strLen = stringLength str;
+		stopLen = stringLength stop;
 
-  CdataSection = (
-    bind
-    (
-      skipThen
-      (string "<![CDATA") # skip
-      (takeUntil "]]>")
-    )
-    (value: pure { type = "cdata"; inherit value; })
-  );
+		# Search for the next valueStart that violates the predicate
+		seekEnd = position: let
+			peekStop = substring position stopLen str;
+		in
+			if (position >= strLen) || (peekStop == stop)
+				then position # break
+				else seekEnd (position + 1); # continue
 
-  Misc = choice [
-    Comment
-    #ProcessingInstructions # todo: <? ... ?>
-    #Space # FIXME error: stack overflow (possible infinite recursion)
-    Space1 # returns null
-  ];
+		valueEnd = seekEnd valueStart;
+		# The number of characters we found
+		valueLen = valueEnd - valueStart;
 
-  Prolog = sequence [
-    (optional XMLDeclaration)
-    (optional Misc)
-    (optional (sequence [
-      DoctypeDeclaration
-      (many Misc)
-    ]))
-  ];
+		foundStop = let
+			peekStop = substring valueEnd stopLen str;
+		in
+			peekStop == stop;
 
-  /*
-  # strict: allow only some attributes
-  XMLDeclaration = sequence [
-    #(string ''<?xml version="1.0"?>'') # ok
-    # fixme
-    (string "<?xml")
-    #(string (" " + ''version="1.0"'')) # ok
-    VersionInfo # FIXME error: value is a function while a list was expected
-    #(optional EncodingDeclaration) # TODO
-    #(optional SDDeclaration) # TODO
-    (optional Space)
-    (string "?>")
-  ];
-  */
+		value = substring valueStart valueLen str;
+		parseEnd = if foundStop then (valueEnd + stopLen) else valueEnd;
+		remain = if foundStop then (len - valueLen - stopLen) else (len - valueLen);
+	in
+		[ value parseEnd remain ];
 
-  # loose: allow all attributes
-  XMLDeclaration = (
-    bind
-    (
-      skipThen
-      (string "<?xml")
-      (
-        thenSkip
-        Attributes
-        (sequence [
-          (optional Space)
-          (string "?>")
-        ])
-      )
-    )
-    (
-      values:
-      pure {
-        type = "decl";
-        attributes = setOfListList values;
-      }
-    )
-  );
+	Comment = 
+		bind
+			(skipThen
+				(string "<!--") # skip
+				(takeUntil "-->"))
+			(value: pure { type = "comment"; inherit value; });
 
-  # setOfListList [ ["a" 1] ["b" 2] ] == { a=1; b=2; }
-  # TODO shorter? go directly from list to set?
-  # aka: listListToAttrs
-  setOfListList = list: builtins.listToAttrs (builtins.map (keyval: {
-    name = builtins.elemAt keyval 0;
-    value = builtins.elemAt keyval 1;
-  }) list);
+	CdataSection =
+		bind
+			(skipThen
+				(string "<![CDATA") # skip
+				(takeUntil "]]>"))
+			(value: pure { type = "cdata"; inherit value; });
 
-  VersionInfo = sequence [
-    Space
-    (string "version=")
-    (
-      alt
-      # single quotes
-      (sequence [
-        (string "'")
-        VersionNumber
-        (string "'")
-      ])
-      # double quotes
-      (sequence [
-        (string ''"'')
-        VersionNumber
-        (string ''"'')
-      ])
-    )
-  ];
+	Misc = choice [
+		Comment
+		#ProcessingInstructions # todo: <? ... ?>
+		#Space # FIXME error: stack overflow (possible infinite recursion)
+		Space1 # returns null
+	];
 
-  VersionNumber = matching "1\\.[0-9]+";
+	Prolog = sequence [
+		(optional XMLDeclaration)
+		(optional Misc)
+		(optional (sequence [ DoctypeDeclaration (many Misc) ]))
+	];
 
-  Document = bind (sequence [
-    Prolog # todo: <?xml ... ?><!DOCTYPE ...>
-    # no comment before the main element?
-    #Element # optional?
-    (optional Element) # optional?
-    (many Misc)
-  ]) (values: pure {
-    type = "root";
-    children = builtins.filter (x: x != null) (L.flatten values);
-  });
+	/*
+	# strict: allow only some attributes
+	XMLDeclaration = sequence [
+		#(string ''<?xml version="1.0"?>'') # ok
+		# fixme
+		(string "<?xml")
+		#(string (" " + ''version="1.0"'')) # ok
+		VersionInfo # FIXME error: value is a function while a list was expected
+		#(optional EncodingDeclaration) # TODO
+		#(optional SDDeclaration) # TODO
+		(optional Space)
+		(string "?>")
+	];
+	*/
+
+	# loose: allow all attributes
+	XMLDeclaration =
+		bind
+			(skipThen
+				(string "<?xml")
+				(thenSkip
+					Attributes
+					(sequence [ (optional Space) (string "?>") ])))
+			(values: pure {
+				type = "decl";
+				attributes = pairsToSet values;
+			});
+
+	VersionInfo = sequence [
+		Space
+		(string "version=")
+		(alt
+			# single quotes
+			(sequence [ (string "'") VersionNumber (string "'") ])
+			# double quotes
+			(sequence [ (string ''"'') VersionNumber (string ''"'') ]))
+	];
+
+	VersionNumber = matching "1\\.[0-9]+";
+
+	Document = bind
+		(sequence [
+			Prolog # todo: <?xml ... ?><!DOCTYPE ...>
+			# no comment before the main element?
+			#Element # optional?
+			(optional Element) # optional?
+			(many Misc)
+		])
+		(values: pure {
+			type = "root";
+			children = compact (flatten values);
+		});
 
 in {
-  # parse node from xml string
-  parseXml = runParser (thenSkip Document eof);
+	# parse node from xml string
+	parseXml = runParser (thenSkip Document eof);
 }

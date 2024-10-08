@@ -16,7 +16,7 @@ in rec {
 		curry curryN
 		uncurry uncurryN
 
-		mkTuple mkPair
+		mkTuple mkPair makeTriple
 		fst snd
 		minListLength
 		zip mapPairs zipMap
@@ -53,16 +53,24 @@ in rec {
     # CurryFn 1 a b = a -> b
     # CurryFn n a b = a -> CurryFn (n - 1) a b
 
-    # curry : ([a] -> b) -> Nat n -> CurryFn n a b
+    # curryN : ([a] -> b) -> Nat n -> CurryFn n a b
     curryN = f: n:
         assert isNat n;
         foldl' compose2 f (genList' append n) [];
 
     # mkTuple : Nat n -> curryFn n a [a]
-    mkTuple = curryN id;
+    mkTuple = n:
+    	if n == 0 then []
+    	else if n == 1 then singleton
+		else if n == 2 then mkPair
+		else if n == 3 then mkTriple
+		else curryN id;
 
 	# mkPair : a -> b -> (a, b)
 	mkPair = a: b: [ a b ];
+
+	# mkTriple : a -> b -> c -> (a, b, c)
+	mkTriple = a: b: c: [ a b c ];
 	
 	# fst : (a, b) -> a
 	fst = pair:
@@ -90,7 +98,7 @@ in rec {
 	uncurry = fn: pair:
 		assert isFunction fn;
 		assert isPair pair;
-		apply2 fn fst snd pair;
+		fn (elemAt pair 0) (elemAt pair 1);
 
 	# minListLength : [a] -> [b] -> Int
 	minListLength = left: right:
@@ -112,12 +120,12 @@ in rec {
 		map (uncurry fn) list;
 	
 	# pairAt : [a] -> [b] -> Int -> (a, b)
-	pairAt = left: right: apply2 mkPair (elemAt left) (elemAt right);
+	pairAt = left: right: i: mkPair (elemAt left i) (elemAt right i);
 
 	# zipMap : (a -> b -> c) -> [a] -> [b] -> [c]
 	zipMap = fn: left: right: let
 		len = minListLength left right;
 	in
 		assert isFunction fn;
-		genList (apply2 fn (elemAt left) (elemAt right)) len;
+		genList (i: fn (elemAt left i) (elemAt right i)) len;
 }

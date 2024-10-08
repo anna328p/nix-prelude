@@ -103,6 +103,8 @@ in mkLibrary {
         misc = ./misc.nix;
 
         lua = ./lua.nix;
+
+        testing = ./testing.nix;
     } (_: {
 		inherit mkLibrary;
 	})

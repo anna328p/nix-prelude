@@ -69,7 +69,7 @@ in with self; rec {
         attrspat != null;
 
     hasFormals = f: let
-    	re = ".*<function>.*<attrspat>.*";
+    	re = ".*<function>.*<attrspat.*";
 
 		matchRes = matchXML re f;
     in
@@ -79,23 +79,30 @@ in with self; rec {
     lambdaArgName' = f: let
         parseRes = describe f;
         varpat = dig parseRes.value [ "expr" "function" "varpat" ];
+        attrspat = dig parseRes.value [ "expr" "function" "attrspat" ];
     in
         assert isFunction f;
 
-        if varpat == null then
+        if (varpat == null) && (attrspat == null) then
             null
-        else
-            (varpat.attributes.name or "");
+        else if varpat != null then
+            varpat.attributes.name
+		else
+            attrspat.attributes.name or null;
 
     lambdaArgName = f: let
-    	re = ".*<function>.*<varpat.+name=\"(.+)\".*";
+    	reVar = ".*<function>.*<varpat.+name=\"(.+)\".*";
+    	reAttrs = ".*<function>.*<attrspat[^>]+name=\"([^>]+)\".*";
 
-    	matchRes = matchXML re f;
+    	matchVar = matchXML reVar f;
+    	matchAttrs = matchXML reAttrs f;
     in
         assert isFunction f;
 
-        if matchRes == null then
+        if (matchVar == null) && (matchAttrs == null) then
             null
+        else if (matchVar != null) then
+            head matchVar
         else
-            head matchRes;
+        	head matchAttrs;
 }

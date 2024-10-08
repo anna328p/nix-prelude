@@ -24,7 +24,9 @@ in with self; rec {
 
         mapSetPairs
         mapSetEntries
+        mapSetValues
         setPairs
+        pairsToSet
 
         genSet
         ;
@@ -86,13 +88,16 @@ in with self; rec {
 
         toList = flatMapSetRec mkPair;
     in
-    	o listToAttrs toList;
+    	set: listToAttrs (toList set);
     
     # mapAttrValues =
     #     sig forall (a: b: (Fn a _- b) _- Set a _- Set b)
 
     # mapAttrValues : (a -> b) -> Set a -> Set b
-    mapAttrValues = o mapAttrs const;
+    mapAttrValues = v: mapAttrs (const v);
+
+    # mapSetValues : (a -> b) -> Set a -> Set b
+    mapSetValues = mapAttrValues;
 
     # mapSetPairs : Set -> ((String, Any) -> a) -> [a]
     mapSetPairs = f: set: let
@@ -100,7 +105,7 @@ in with self; rec {
         values = attrValues set;
         count = length keys;
     in
-        genList (o f (pairAt keys values)) count;
+        genList (i: f (pairAt keys values i)) count;
 
     # mapSetEntries : Set -> (String -> Any -> a) -> [a]
     mapSetEntries = f: set: let
@@ -110,17 +115,20 @@ in with self; rec {
     in
         genList (i: f (elemAt keys i) (elemAt values i)) count;
 
-    # setPairs : Set -> [ (String, Any) ]
-    setPairs = mapSetPairs id;
-
     # mkMapping : String -> a -> Record { name : String, value : a }
     mkMapping = name: value:
         assert isString name;
         { inherit name value; };
 
+    # setPairs : Set -> [ (String, Any) ]
+    setPairs = mapSetPairs id;
+
+	# pairsToSet : [ (String, Any) ] -> Set Any
+    pairsToSet = list: listToAttrs (map (uncurry mkMapping) list);
+
     # genSet = [String] -> (String -> a) -> Dict a
-    genSet = fn: let
-        toPairs = map (k: mkMapping k (fn k));
+    genSet = fn: list: let
+        pairs = map (k: mkMapping k (fn k)) list;
     in
-        o listToAttrs toPairs;
+        listToAttrs pairs;
 }

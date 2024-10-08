@@ -1,15 +1,23 @@
-{ prelude, ... }:
+{ flakes, ... }:
 
 let
+	self = flakes.self.lib;
+
 	testFiles = [
 		./introspection.nix
+		./base.nix
+		./base64.nix
 	];
 
 	runTests = files: let
-		deepSeq' = v: builtins.deepSeq v v;
-
-		import' = f: import f { inherit prelude; };
+		import' = f: import f { inherit self; };
 	in
-		builtins.map (f: deepSeq' (import' f)) files;
+		builtins.listToAttrs
+			(builtins.map
+				(path: {
+					name = builtins.toString (builtins.baseNameOf path);
+					value = self.deepForce (import' path);
+				})
+				files);
 in
 	runTests testFiles

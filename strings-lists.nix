@@ -18,7 +18,7 @@ in rec {
         fixedWidthString
         init last
 
-        genList'
+        replicate
 
         leftPadListObj rightPadListObj
         leftPadListList rightPadListList
@@ -48,13 +48,16 @@ in rec {
         replaceAt
 
         optionals optional
+        none
         flatten
+        compact
 
-        lengthsEq stringLengthsEq
+        length' lengthsEq
 
         foldl1
         sum
         product
+        average
         ;
     };
 
@@ -68,11 +71,13 @@ in rec {
     sublist = start: count: list: let
         len = length list;
 
-        trueCount = if (start + count) < len
-            then count
-            else if start >= len
-                then 0
-                else (len - start);
+        trueCount =
+        	if (start + count) < len then
+        		count
+            else if start >= len then
+            	0
+            else
+            	(len - start);
     in
         assert isPositiveInt start;
         assert isPositiveInt count;
@@ -89,10 +94,10 @@ in rec {
         substring index 1 str;
 
     # repeatStr : Str -> Int -> Str
-    repeatStr = str: count: concatStrings (genList' str count);
+    repeatStr = str: count: concatStrings (replicate count str);
 
     # repeatStr : [a] -> Int -> [a]
-    repeatList = list: count: concatLists (genList' list count);
+    repeatList = list: count: concatLists (replicate count list);
 
     # init : [a] -> [a]
     init = list: let
@@ -163,8 +168,8 @@ in rec {
             then str
             else padding + str;
     
-    # genList' : a -> Int -> [a]
-    genList' = o genList const;
+	# replicate : Int -> a -> [a]
+	replicate = n: x: genList (const x) n;
 
     # predFn = Any -> Bool
     # getLenFn = T a -> Int
@@ -192,7 +197,7 @@ in rec {
         isInnerType = const true;
         isContainer = isList;
         getLen = length;
-        mkPad = genList';
+        mkPad = flip replicate;
         inherit join;
     };
 
@@ -339,6 +344,7 @@ in rec {
             then elemAt list ix
             else null;
 
+
     # filterIndices : (a -> Bool) -> [a] -> [Nat]
     filterIndices = pred: list: let
     	optionalIndex = ix:
@@ -408,6 +414,9 @@ in rec {
     # optionals : Bool -> a -> [a];
     optional = testRes: arg: optionals testRes [ arg ];
 
+	# none : (a -> Bool) -> [a] -> Bool
+	none = f: all (x: !(f x));
+
     # NestedList : Type -> Type
     # NestedList a = [a | NestedList a]
 
@@ -417,14 +426,30 @@ in rec {
     in
         assert isList list;
 
-        if all (v: !(isList v)) list
+        if none isList list
             then list
             else concatLists (map fn list);
 
-    genericLengthsEq = getLen: a: b: (getLen a) == (getLen b);
 
-    lengthsEq = genericLengthsEq length;
-    stringLengthsEq = genericLengthsEq stringLength;
+	# compact : [a | Null] -> [a]
+	compact = filter (x: x != null);
+
+
+	# length' : [Any] | String -> Int
+	length' = val:
+		assert (isList val) || (isString val);
+
+		if isList val then
+			length val
+		else if isString val then
+			stringLength val
+		else
+			unreachable;
+
+
+	# lengthsEq = [Any] | String -> [Any] | String -> Bool
+	lengthsEq = a: b: (length' a) == (length' b);
+
 
     # foldl1 : (b -> a -> b) -> [a] -> b
     foldl1 = fn: list:
@@ -433,9 +458,19 @@ in rec {
     	assert (length list) >= 1;
     	foldl' fn (head list) (tail list);
 
+
     # sum : [Int] -> Int
     sum = foldl' __add 0;
 
+
     # product : [Int] -> Int
     product = foldl' __mul 1;
+
+
+	# average : [Int, Float] -> Float
+	average = list: let
+		len = length list;
+	in
+		assert (isList list) && len > 0;
+		(sum list) / len;
 }

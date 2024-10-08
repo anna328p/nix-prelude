@@ -5,6 +5,7 @@ let
         foldl'
         isFunction isAttrs
         seq deepSeq
+		throw
         ;
 
 in rec {
@@ -14,7 +15,7 @@ in rec {
         pipe pipe'
         fix
 
-        force
+        force deepForce
 
         isLambda
 
@@ -22,6 +23,8 @@ in rec {
         apply2 A2
         and or_ not eq neq
         andA2 orA2
+
+        unreachable
         ;
     };
 
@@ -93,4 +96,6 @@ in rec {
 
     andA2 = apply2 and;
     orA2 = apply2 or_;
+
+    unreachable = throw "unreachable";
 }
