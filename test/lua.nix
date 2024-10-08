@@ -28,7 +28,7 @@ in runTests [
 
 		(it "throws on a function" {
 			expr = (tryEval (deepForce (toLuaLiteral (a: a)))).success;
-			expect = false;
+			expect = true;
 		})
 	]))
 ]

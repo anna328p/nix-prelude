@@ -54,12 +54,20 @@ in rec {
 			]);
 		};
 
-	dummyDrv = derivation {
+	dummyDrvPass = derivation {
 		name = "_";
 		builder = "builtin:buildenv";
 		system = "builtin";
 		derivations = [];
 		manifest = "/dev/null";
+	};
+
+	dummyDrvFail = derivation {
+		name = "_";
+		builder = "builtin:buildenv";
+		system = "builtin";
+		derivations = [];
+		manifest = ""; # nonexistent!
 	};
 
 	testToDrv = ctxName: result: let
@@ -91,8 +99,8 @@ in rec {
 	in
 		if (all id passes') then
 			trace "=> all tests for ${ctxName} pass"
-				dummyDrv
+				dummyDrvPass
 		else
 			trace "!! some tests for ${ctxName} failed"
-				dummyDrv;
+				dummyDrvFail;
 }
