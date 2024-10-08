@@ -104,7 +104,10 @@ in with self; rec {
         assert isList fields;
         assert all (f: isPair f && isString (fst f)) fields;
 
-        foldl' (o uncurry CallOn) obj fields;
+        foldl' (v: uncurry (CallOn v)) obj fields;
+
+    Chain' = obj: unrollArgSequence isList
+    	(foldl' (v: uncurry (CallOn v)) obj);
 
     Require = name: _Call (verbatim "require") [ name ];
 

@@ -101,6 +101,7 @@ in mkLibrary {
         hashes = ./hashes.nix;
 
         misc = ./misc.nix;
+        helpers = ./helpers.nix;
 
         lua = ./lua.nix;
 

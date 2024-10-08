@@ -7,6 +7,7 @@ let
 		./introspection.nix
 		./base.nix
 		./base64.nix
+		./lua.nix
 	];
 
 	runTests = files: let
@@ -14,9 +15,9 @@ let
 	in
 		builtins.listToAttrs
 			(builtins.map
-				(path: {
-					name = builtins.toString (builtins.baseNameOf path);
-					value = self.deepForce (import' path);
+				(p: {
+					name = self.abbreviatePath p;
+					value = self.deepForce (import' p);
 				})
 				files);
 in

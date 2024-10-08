@@ -14,50 +14,17 @@
 
 	outputs = { self, parsec, systems }@flakes: {
 
+		inputs = flakes;
+
 		lib = import ./. { inherit flakes; };
 
 		checks = let
-			inherit (builtins)
-				all
-				attrValues
-				mapAttrs
-				trace
-				;
-
-			inherit (self.lib)
-				id
-				genSet
-				unreachable
-				const
-				;
-
-			dummyDrv = derivation {
-				name = "_";
-				builder = "builtin:buildenv";
-				system = "builtin";
-				derivations = [];
-				manifest = "/dev/null";
-			};
+			inherit (builtins) mapAttrs;
+			inherit (self.lib) genSet const;
 
 			eachSystem = fn: genSet fn (import systems);
 
-			testToDrv = ctxName: result: let
-				passes = map
-					(v: trace
-						"    => ${v.msg}"
-						v.allPassed)
-					(attrValues result);
-
-				passes' = trace "-> running tests for ${ctxName}"
-					passes;
-			in
-				if (all id passes') then
-					trace "=> all tests for ${ctxName} pass"
-						dummyDrv
-				else
-					unreachable;
-
-			testResults = mapAttrs testToDrv
+			testResults = mapAttrs self.lib.testing.testToDrv
 				(import ./test { inherit flakes; });
 		in
 			eachSystem (const testResults);
