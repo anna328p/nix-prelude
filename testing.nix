@@ -54,16 +54,18 @@ in rec {
 			]);
 		};
 
+	# Should always build; works anywhere
 	dummyDrvPass = derivation {
-		name = "_";
+		name = "placeholder-test-pass";
 		builder = "builtin:buildenv";
 		system = "builtin";
 		derivations = [];
 		manifest = "/dev/null";
 	};
 
+	# Intentionally fails to build
 	dummyDrvFail = derivation {
-		name = "_";
+		name = "placeholder-test-fail";
 		builder = "builtin:buildenv";
 		system = "builtin";
 		derivations = [];
@@ -94,7 +96,7 @@ in rec {
 					v.allPassed)
 			(attrValues result);
 
-		passes' = trace "-> running tests for ${ctxName}"
+		passes' = trace "-> test results for ${ctxName}:"
 			passes;
 	in
 		if (all id passes') then
