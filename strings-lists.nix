@@ -10,6 +10,7 @@ with self; let
         foldl' concatLists filter
         concatStringsSep
         all
+		match
         ;
 in rec {
     exports = self: { inherit (self)
@@ -42,6 +43,8 @@ in rec {
         findIndex find
         filterIndices
         splitOn
+
+        match'
 
         lines
 
@@ -387,6 +390,9 @@ in rec {
 		if len == 0
 			then list
 			else spans;
+
+	# match' : Str -> Str -> Bool
+	match' = re: str: (match re str) != null;
 
 	# lines : Str -> [Str]
 	lines = str:

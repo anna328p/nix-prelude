@@ -49,4 +49,34 @@ in runTests [
 			expect = { a = 1; b = 2; };
 		})
 	]))
+
+	(for "isLambda" ({ it, ... }: [
+		(it "returns false for a non-function" {
+			expr = isLambda 1;
+			expect = false;
+		})
+
+		(it "returns true for a function" {
+			expr = isLambda (a: a);
+			expect = true;
+		})
+
+		(it "returns true for a valid functor attrset" {
+			expr = let
+				set = { __functor = self: arg: [ self arg ]; };
+			in
+				isLambda set;
+
+			expect = true;
+		})
+
+		(it "returns false for an invalid functor attrset" {
+			expr = let
+				set = { __functor = self: [ self ]; };
+			in
+				isLambda set;
+
+			expect = false;
+		})
+	]))
 ]

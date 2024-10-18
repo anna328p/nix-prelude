@@ -8,6 +8,7 @@ let
 		./base.nix
 		./base64.nix
 		./lua.nix
+		./tuples.nix
 	];
 
 	runTests = files: let

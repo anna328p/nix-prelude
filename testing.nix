@@ -10,7 +10,6 @@ let
 		trace
 		deepSeq
 		toJSON
-		unsafeGetAttrPos
 		;
 	
 	inherit (self)
@@ -18,6 +17,7 @@ let
 		pairsToSet
 		id
 		unreachable
+		toValidDrvName
 		;
 
 in rec {
@@ -47,7 +47,7 @@ in rec {
 			failures = filter (r: !(r.pass or false)) results;
 
 			msg = if allPassed then
-				"${subject} passed all checks"
+				"${subject} passed all tests"
 			else concatLines (concatLists [
 				[ "${subject} fails when:" ]
 				(map (t: "  - it ${t.what}") failures)
@@ -55,8 +55,8 @@ in rec {
 		};
 
 	# Should always build; works anywhere
-	dummyDrvPass = derivation {
-		name = "placeholder-test-pass";
+	dummyDrvPass = name: derivation {
+		name = "placeholder-${toValidDrvName name}-test-pass";
 		builder = "builtin:buildenv";
 		system = "builtin";
 		derivations = [];
@@ -64,8 +64,8 @@ in rec {
 	};
 
 	# Intentionally fails to build
-	dummyDrvFail = derivation {
-		name = "placeholder-test-fail";
+	dummyDrvFail = name: derivation {
+		name = "placeholder-${toValidDrvName name}-test-fail";
 		builder = "builtin:buildenv";
 		system = "builtin";
 		derivations = [];
@@ -74,16 +74,21 @@ in rec {
 
 	testToDrv = ctxName: result: let
 		failMsg = subject: f: let
-			prefix = "     !! when ${subject} ${f.what}";
-
+			prefix = "    !!";
 			positionOf = self.showPosOf f.orig;
 		in
 			if f ? expect then let
 				pos = positionOf "expr";
-				in "${prefix}: (at ${pos}) expected ${toJSON f.expect}; got ${toJSON f.expr}"
+				in [
+					"${prefix} while checking if ${subject} ${f.what}:"
+					"    ${prefix} (at ${pos}) expected ${toJSON f.expect}; got ${toJSON f.expr}"
+				]
 			else if f ? predicate then let
 				pos = positionOf "predicate";
-				in "${prefix}: (at ${pos}) predicate failed; got ${toJSON f.expr}"
+				in [
+					"${prefix} while checking if ${subject} ${f.what}:"
+					"    ${prefix} (at ${pos}) predicate failed; got ${toJSON f.expr}"
+				]
 			else
 				unreachable;
 
@@ -92,7 +97,7 @@ in rec {
 					trace "    => ${v.msg}"
 						v.allPassed
 				else deepSeq
-					(map (f: trace (failMsg v.subject f) null) v.failures)
+					(map (f: map (v: trace v null) (failMsg v.subject f)) v.failures)
 					v.allPassed)
 			(attrValues result);
 
@@ -101,8 +106,8 @@ in rec {
 	in
 		if (all id passes') then
 			trace "=> all tests for ${ctxName} pass"
-				dummyDrvPass
+				(trace "" dummyDrvPass ctxName)
 		else
 			trace "!! some tests for ${ctxName} failed"
-				dummyDrvFail;
+				(trace "" dummyDrvFail ctxName);
 }

@@ -32,7 +32,7 @@ in rec {
 	# isPair : [a] -> Bool
 	isPair = isTuple 2;
 
-    tupleMatches = n: let
+    tupleMatches = n: if n == 2 then pairMatches else let
         fn = l: r: lengthsEq l r && all id (zipMap id l r);
     in
         curryN fn n;
@@ -56,7 +56,7 @@ in rec {
     # curryN : ([a] -> b) -> Nat n -> CurryFn n a b
     curryN = f: n:
         assert isNat n;
-        foldl' compose2 f (genList' append n) [];
+        foldl' compose2 f (replicate n append) [];
 
     # mkTuple : Nat n -> curryFn n a [a]
     mkTuple = n:
