@@ -32,12 +32,43 @@ in runTests [
 
 
 	(for "tupleMatches" ({ it, ... }: [
-		(it "works" {
+		(it "matches a triple correctly" {
 			expr = tupleMatches 3
 				isInt isFloat isNull
 				[ 1 1.0 null ];
 
 			expect = true;
+		})
+
+		(it "works on pairs" {
+			expr = tupleMatches 2
+				isInt isFloat
+				[ 1 1.0 ];
+
+			expect = true;
+		})
+
+		(it "fails on a tuple of the wrong length" {
+			expr = tupleMatches 3
+				isInt isFloat isNull
+				[ 1 1.0 ];
+
+			expect = false;
+		})
+
+		(it "throws on a non-tuple" {
+			expr = tryEval
+				(tupleMatches 3
+					isInt isFloat isNull
+					{ });
+
+			predicate = v: v.success == false;
+		})
+
+		(it "throws for length 0" {
+			expr = tryEval (tupleMatches 0 [ ]);
+
+			predicate = v: v.success == false;
 		})
 	]))
 ]

@@ -55,7 +55,9 @@ in rec {
 
 	toValidDrvName = str: let
 		replaceWith = "?";
-		a = split "(^[^${drvNameFirst}]|[^${drvNameChar}])" str;
+		a = split
+			/* regex */ "(^[^${drvNameFirst}]|[^${drvNameChar}])"
+			str;
 		b = map
 			(v: if isList v then
 				repeatStr replaceWith (stringLength (elemAt v 0))
