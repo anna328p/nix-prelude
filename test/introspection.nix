@@ -5,7 +5,7 @@ let
 		tryEval
 		;
 
-	inherit (self.testing) runTests for;
+	inherit (self.testing) runTests describe;
 
 	inherit (self.introspection)
 		hasEllipsis'
@@ -20,7 +20,7 @@ let
 	runSameTests = set: tests: let
 		inherit (builtins) mapAttrs attrValues;
 
-		tested = mapAttrs (name: value: for name (tests value)) set;
+		tested = mapAttrs (name: value: describe name (tests value)) set;
 	in
 		attrValues tested;
 

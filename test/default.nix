@@ -9,6 +9,7 @@ let
 		./base64.nix
 		./lua.nix
 		./tuples.nix
+		./helpers.nix
 	];
 
 	runTests = files: let

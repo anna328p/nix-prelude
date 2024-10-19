@@ -25,7 +25,7 @@ in rec {
 
 	runTests = list: pairsToSet (map (r: [ r.subject r ]) list);
 
-	for = subject: fn: let
+	describe = subject: fn: let
 		it = what: { expr, expect ? null, predicate ? null }@orig:
 			addErrorContext "while testing whether ${subject} ${what}" (
 				assert (expect != null) || (predicate != null);

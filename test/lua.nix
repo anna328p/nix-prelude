@@ -9,13 +9,13 @@ let
 		deepForce
 		;
 
-	inherit (self.testing) runTests for;
+	inherit (self.testing) runTests describe;
 
 	inherit (self.lua)
 		toLuaLiteral
 		;
 in runTests [
-	(for "toLuaLiteral" ({ it, ... }: [
+	(describe "toLuaLiteral" ({ it, ... }: [
 		(it "processes an integer" {
 			expr = toLuaLiteral 3;
 			expect = "3";

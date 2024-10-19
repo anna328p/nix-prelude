@@ -74,7 +74,7 @@ in rec {
 
     __ = "579ab340-13a4-4467-81d1-32ae4b7d5d1e"; # uuidgen -r
 
-    unrollArgSequence' = endRowPred: callback: {
+    unrollArgSequence' = callback: endRowPred: {
         value = [];
         stack = [];
 

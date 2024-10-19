@@ -6,14 +6,14 @@ let
 		isInt isFloat isNull
 		;
 	
-	inherit (self.testing) runTests for;
+	inherit (self.testing) runTests describe;
 	
 	inherit (self.tuples)
 		isTuple
 		tupleMatches
 		;
 in runTests [
-	(for "isTuple" ({ it, ... }: [
+	(describe "isTuple" ({ it, ... }: [
 		(it "identifies a valid tuple" {
 			expr = isTuple 2 [ 1 2 ];
 			expect = true;
@@ -31,7 +31,7 @@ in runTests [
 	]))
 
 
-	(for "tupleMatches" ({ it, ... }: [
+	(describe "tupleMatches" ({ it, ... }: [
 		(it "matches a triple correctly" {
 			expr = tupleMatches 3
 				isInt isFloat isNull

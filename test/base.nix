@@ -5,7 +5,7 @@ let
 		tryEval
 		;
 	
-	inherit (self.testing) runTests for;
+	inherit (self.testing) runTests describe;
 	
 	inherit (self.base)
 		pipe pipe'
@@ -13,7 +13,7 @@ let
 		isLambda
 		;
 in runTests [
-	(for "pipe" ({ it, ... }: [
+	(describe "pipe" ({ it, ... }: [
 		(it "pipes a value through functions" {
 			expr = let
 				f = v: v + 5;
@@ -26,7 +26,7 @@ in runTests [
 		})
 	]))
 
-	(for "pipe'" ({ it, ... }: [
+	(describe "pipe'" ({ it, ... }: [
 		(it "pipes a value through functions" {
 			expr = let
 				f = v: v + 5;
@@ -39,7 +39,7 @@ in runTests [
 		})
 	]))
 
-	(for "fix" ({ it, ... }: [
+	(describe "fix" ({ it, ... }: [
 		(it "establishes a fixed point" {
 			expr = fix (self: {
 				a = 1;
@@ -50,7 +50,7 @@ in runTests [
 		})
 	]))
 
-	(for "isLambda" ({ it, ... }: [
+	(describe "isLambda" ({ it, ... }: [
 		(it "returns false for a non-function" {
 			expr = isLambda 1;
 			expect = false;
