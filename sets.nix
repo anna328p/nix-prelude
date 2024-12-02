@@ -52,7 +52,7 @@ in with self; rec {
         optionalValues = a: b: k: let
             get = set: key: if set ? ${key} then { ${key} = set.${key}; } else {};
         in
-            { a = get a n; b = get b n; };
+            { a = get a k; b = get b k; };
 
         diffNames = a: b: let
             c = a // b;
