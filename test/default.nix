@@ -10,6 +10,7 @@ let
 		./lua.nix
 		./tuples.nix
 		./helpers.nix
+		./sets.nix
 	];
 
 	runTests = files: let
