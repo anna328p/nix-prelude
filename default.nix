@@ -100,6 +100,8 @@ in mkLibrary {
         prng = ./prng.nix;
         hashes = ./hashes.nix;
 
+        files = ./files.nix;
+
         misc = ./misc.nix;
         helpers = ./helpers.nix;
 

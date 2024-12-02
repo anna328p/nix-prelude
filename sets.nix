@@ -2,11 +2,10 @@
 
 let
     inherit (builtins)
-		isFunction
-        isAttrs attrNames attrValues mapAttrs
+        isString isList isFunction isAttrs
+		attrNames attrValues mapAttrs
         length filter foldl' map genList elemAt concatLists
         listToAttrs concatStringsSep
-        isString
         zipAttrsWith
         ;
 
@@ -29,6 +28,9 @@ in with self; rec {
         pairsToSet
 
         genSet
+		filterSet
+
+        mapSetRec
         ;
     };
 
@@ -126,9 +128,33 @@ in with self; rec {
 	# pairsToSet : [ (String, Any) ] -> Set Any
     pairsToSet = list: listToAttrs (map (uncurry mkMapping) list);
 
-    # genSet = [String] -> (String -> a) -> Dict a
+    # genSet : [String] -> (String -> a) -> Dict a
     genSet = fn: list: let
         pairs = map (k: mkMapping k (fn k)) list;
     in
         listToAttrs pairs;
+
+	# filterSet : (String -> Any -> Bool) -> Set Any -> Set Any
+    filterSet = pred: set: let
+		mapFn = k: v: if pred k v then mkMapping k v else null;
+		entries = filter (v: v != null) (mapSetEntries mapFn set);
+	in
+		listToAttrs entries;
+
+	# mapSetRec : ([String] -> Any -> Any) -> Set Any -> Set Any
+    mapSetRec = let
+    	recurse = path: fn: set:
+    		assert isList path;
+    		assert isFunction fn;
+    		assert isAttrs set;
+			mapAttrs
+				(k: v: let
+					newPath = path ++ [ k ];
+				in
+					if isAttrs v
+						then recurse newPath fn v
+						else fn newPath v)
+				set;
+	in
+		recurse [];
 }
