@@ -87,6 +87,8 @@ in mkLibrary {
     using {
         base = ./base.nix;
         numeric = ./numeric.nix;
+        rational = ./rational.nix;
+        math = ./math.nix;
 
         strings-lists = ./strings-lists.nix;
         tuples = ./tuples.nix;
@@ -101,6 +103,8 @@ in mkLibrary {
         hashes = ./hashes.nix;
 
         files = ./files.nix;
+
+        colorspaces = ./colorspaces.nix;
 
         misc = ./misc.nix;
         helpers = ./helpers.nix;

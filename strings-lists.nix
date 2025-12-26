@@ -43,6 +43,12 @@ in rec {
         findIndex find
         filterIndices
         splitOn
+        splitStrOn
+
+        genString
+
+        reverse
+        reverseStr
 
         match'
 
@@ -390,6 +396,30 @@ in rec {
 		if len == 0
 			then list
 			else spans;
+
+	# splitStrOn : Str -> Str -> [Str]
+	splitStrOn = sep: str:
+		filter isString (split sep str);
+
+	# genString : (Nat -> Str) -> Nat -> Str
+	genString = fn: count: let
+		chars = genList fn len;
+	in
+		concatStrings chars;
+
+	# reverse : [a] -> [a]
+	reverse = let
+		len = length list;
+	in
+		genList (i: elemAt list (len - i - 1)) len;
+
+	# reverseStr : Str -> Str
+	reverseStr = str: let
+		len = stringLength str;
+		chars = genList (i: substring (len - i - 1) 1 str) len;
+	in
+		assert isString str;
+		concatStrings chars;
 
 	# match' : Str -> Str -> Bool
 	match' = re: str: (match re str) != null;

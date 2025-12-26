@@ -9,9 +9,20 @@ let
         functionArgs attrNames attrValues
         throw
         concatStringsSep toJSON
-        addErrorContext
+		concatMap
+		head
         ;
-in with self; rec {
+
+    inherit (self)
+		mapSetEntries genSet
+		lambdaArgName hasEllipsis hasFormals
+		o uncurry
+		isPair
+		optional
+		unrollArgSequence
+		concatMapStringsSep
+		;
+in rec {
     exports = self: { inherit (self)
         toLuaLiteral
         ;
@@ -65,14 +76,23 @@ in with self; rec {
         verbatim "{ ${fields'} }";
 
     # setToLuaTable : Set -> Str
-    setToTable = let
-        mkEntries = mapSetPairs (uncurry tableRecord);
-    in
-        o mkTableLiteral mkEntries;
+    setToTable = set:
+        mkTableLiteral (mapSetEntries tableRecord set);
 
     # listToLuaTable : List -> Str
     listToTable = mkTableLiteral;
 
+    Table' = let
+    	toTableEntries = entry:
+    		if isAttrs entry then
+    			mapSetEntries tableRecord entry
+			else if isList entry then
+				entry
+			else
+				throw "Invalid table chunk: ${toString entry}";
+	in chunks:
+		mkTableLiteral (concatMap toTableEntries chunks);
+    
     throwBadType = val:
         throw "value ${val} cannot be converted to a Lua literal";
 
@@ -102,7 +122,7 @@ in with self; rec {
 
     Chain = obj: fields:
         assert isList fields;
-        assert all (f: isPair f && isString (fst f)) fields;
+        assert all (f: isPair f && isString (head f)) fields;
 
         foldl' (v: uncurry (CallOn v)) obj fields;
 
@@ -140,15 +160,19 @@ in with self; rec {
         consequence = response'.Then;
         alternative = response'.Else;
 
-        ifHasElse = v: if alternative != null then v else "";
-
-        res = ''
+		ifPart = ''
             if (${toLua cond}) then
                 ${toLua (Chunk consequence)}
-            ${ifHasElse "else"}
-                ${ifHasElse (toLua (Chunk alternative))}
+		'';
+		elsePart = if alternative == null then "" else ''
+            else
+                ${toLua (Chunk alternative)}
+        '';
+        endPart = ''
             end
         '';
+
+        res = ifPart + elsePart + endPart;
     in
         assert isList response || isAttrs response;
         assert isList response'.Then;
@@ -164,7 +188,7 @@ in with self; rec {
         res = argNames ++ (optional isVariadic "...");
     in
         assert isFunction fn;
-        assert all (andA2 isBool not) (attrValues args);
+        assert all (a: a == false) (attrValues args);
         assert isBool isVariadic;
         res;
 

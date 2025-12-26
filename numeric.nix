@@ -1,16 +1,20 @@
 { self, ... }:
 
-with self; let
+let
+	inherit (self)
+		pow2
+		;
+
 	inherit (builtins)
 		isInt
 		;
-in {
+in rec {
 	exports = self: { inherit (self)
 	    isPositive isNegative
 	    isPositiveInt isNegativeInt
 	    isNat
-		min max modulo abs
-		pow pow2 ceilDiv
+		min max mod modulo abs
+		ceilDiv
 		shiftLeft shiftRight
 		;
 	};
@@ -38,22 +42,11 @@ in {
 
 	# modulo : Int -> Int -> Int
 	modulo = a: b: a - (a / b) * b;
+	mod = modulo;
 
 	# abs : Int -> Int
 	abs = i: if isPositive i then i else -i;
 
-	# pow : Int -> Int -> Int
-	pow = base: exp:
-		assert isPositiveInt exp;
-		if exp == 0 then
-			1
-		else if exp == 1 then
-			base
-		else
-			base * (pow base (exp - 1));
-
-	pow2 = import data/pow2.nix;
-	
 	# ceilDiv : Int -> Int -> Int
 	ceilDiv = a: b: let
 		quotient = a / b;

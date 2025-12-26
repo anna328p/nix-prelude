@@ -1,10 +1,18 @@
 { self, ... }:
 
-with self; let
+let
 	inherit (builtins)
 		isList length elemAt genList all
 		isInt isFunction
 		map foldl'
+		head
+		;
+
+	inherit (self)
+		id
+		lengthsEq
+		compose2 replicate min
+		isNat
 		;
 in rec {
 	exports = self: { inherit (self)
@@ -75,7 +83,7 @@ in rec {
 	# fst : (a, b) -> a
 	fst = pair:
 		assert isPair pair;
-		elemAt pair 0;
+		head pair;
 
 	# snd : (a, b) -> b
 	snd = pair:
@@ -104,7 +112,7 @@ in rec {
 	minListLength = left: right:
 		assert isList left;
 		assert isList right;
-		(on min length) left right;
+		min (length left) (length right);
 
 	# zip : [a] -> [b] -> [(a, b)]
 	zip = left: right: let

@@ -7,6 +7,7 @@ let
 		split
 		isList
 		elemAt
+		length
 		stringLength
 		;
 
@@ -19,6 +20,10 @@ let
 		;
 in rec {
 	exports = self: { inherit (self)
+		when
+
+		invertPred
+
 		abbreviatePath
 		formatPos
 		showPosOf
@@ -36,6 +41,30 @@ in rec {
 		unrollArgSequence
 		;
 	};
+
+	when = entries: fallback: let
+		len = length entries;
+		nPairs = len / 2;
+		lastPair = nPairs - 1;
+
+		getCondition = n: elemAt entries (n * 2);
+		getConsequent = n: elemAt entries (n * 2 + 1);
+
+		step = index:
+			if getCondition index
+				then getConsequent index
+				else if index == lastPair
+					then fallback
+					else step (index + 1);
+	in
+		assert len / 2 * 2 == len; # even number of entries
+
+		if len == 0
+			then fallback
+			else step 0;
+
+	# invertPred : (a -> Bool) -> (a -> Bool)
+	invertPred = pred: x: !(pred x);
 
 	# abbreviatePath : Path -> String
 	abbreviatePath = p: (baseNameOf (dirOf p)) + "/" + (baseNameOf p);

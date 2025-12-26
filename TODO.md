@@ -1,0 +1,1 @@
+- add RFC145 comments for [nixdoc](https://github.com/nix-community/nixdoc) support

@@ -3,13 +3,15 @@
 let
 	inherit (builtins)
 		addErrorContext
-		all
+		any all
 		filter
-		concatLists
+		concatLists concatMap
 		attrValues
 		trace
 		deepSeq
 		toJSON
+		length
+		seq
 		;
 	
 	inherit (self)
@@ -18,6 +20,8 @@ let
 		id
 		unreachable
 		toValidDrvName
+		optional optionals
+		when
 		;
 
 in rec {
@@ -42,16 +46,13 @@ in rec {
 	in
 		rec {
 			inherit subject results;
-			allPassed = all (r: r.pass or false) results;
+
 			passes = filter (r: r.pass or false) results;
 			failures = filter (r: !(r.pass or false)) results;
 
-			msg = if allPassed then
-				"${subject} passed all tests"
-			else concatLines (concatLists [
-				[ "${subject} fails when:" ]
-				(map (t: "  - it ${t.what}") failures)
-			]);
+			anyPassed = (length passes) > 0;
+			allPassed = (length failures) == 0;
+			somePassed = anyPassed && !allPassed;
 		};
 
 	# Should always build; works anywhere
@@ -73,41 +74,63 @@ in rec {
 	};
 
 	testToDrv = ctxName: result: let
-		failMsg = subject: f: let
-			prefix = "    !!";
-			positionOf = self.showPosOf f.orig;
+		err = msg: "!! ${msg}";
+
+		failMsg = subject: t: let
+			positionOf = self.showPosOf t.orig;
+
+			where = when [
+				(t ? expect)    "at ${positionOf "expr"}"
+				(t ? predicate) "at ${positionOf "predicate"}"
+			] unreachable;
+
+			context = "while checking if ${subject} ${t.what}:";
+
+			failure = when [
+				(t ? expect)    "expected ${toJSON t.expect}; got ${toJSON t.expr}"
+				(t ? predicate) "predicate is false; got ${toJSON t.expr}"
+			] unreachable;
+
+			message = [
+				"  !! ${context}"
+				"  !!   ${where}:"
+				"  !!   ${failure}"
+			];
 		in
-			if f ? expect then let
-				pos = positionOf "expr";
-				in [
-					"${prefix} while checking if ${subject} ${f.what}:"
-					"    ${prefix} (at ${pos}) expected ${toJSON f.expect}; got ${toJSON f.expr}"
-				]
-			else if f ? predicate then let
-				pos = positionOf "predicate";
-				in [
-					"${prefix} while checking if ${subject} ${f.what}:"
-					"    ${prefix} (at ${pos}) predicate failed; got ${toJSON f.expr}"
-				]
-			else
-				unreachable;
+			message;
 
-		passes = map
-			(v: if (v.allPassed) then
-					trace "    => ${v.msg}"
-						v.allPassed
-				else deepSeq
-					(map (f: map (v: trace v null) (failMsg v.subject f)) v.failures)
-					v.allPassed)
-			(attrValues result);
+		groupSummary = group: let
+			inherit (group) subject allPassed somePassed passes failures;
+		in
+			concatLists [
+				(optional allPassed "${subject} passed all tests:")
+				(optional somePassed "${subject} successfully:")
+				(map (t: "  - ${t.what}") passes)
 
-		passes' = trace "-> test results for ${ctxName}:"
-			passes;
+				(optional (!allPassed) "${subject} has failures:")
+				(concatMap (failMsg subject) failures)
+			];
+
+		groups = attrValues result;
+
+		noFailures = all (g: g.allPassed) groups;
+		someFailures = !noFailures;
+
+		print = v: trace v null;
+		printLines = map print;
+
+		output = concatLists [
+			[ "-> test results for ${ctxName}:" ]
+			(concatMap groupSummary groups)
+
+			(optional noFailures "=> all tests for ${ctxName} pass")
+			(optional someFailures "!! some tests for ${ctxName} failed")
+			[ "" ]
+		];
+
+		drv = if noFailures
+			then dummyDrvPass ctxName
+			else dummyDrvFail ctxName;
 	in
-		if (all id passes') then
-			trace "=> all tests for ${ctxName} pass"
-				(trace "" dummyDrvPass ctxName)
-		else
-			trace "!! some tests for ${ctxName} failed"
-				(trace "" dummyDrvFail ctxName);
+		deepSeq (printLines output) drv;
 }
