@@ -106,6 +106,8 @@ in mkLibrary {
 
         colorspaces = ./colorspaces.nix;
 
+        units = ./units.nix;
+
         misc = ./misc.nix;
         helpers = ./helpers.nix;
 
