@@ -1,21 +1,16 @@
-{ self, ... }:
+{ ... }:
 
-let
-	inherit (self)
-		pow2
-		;
-
-in {
+{
 	exports = self: { inherit (self)
 		kibi mebi gibi tebi
 		kilo mega giga tera
 		;
 	};
 
-	kibi = pow2 10;
-	mebi = pow2 20;
-	gibi = pow2 30;
-	tebi = pow2 40;
+	kibi = 1024;
+	mebi = 1024 * 1024;
+	gibi = 1024 * 1024 * 1024;
+	tebi = 1024 * 1024 * 1024 * 1024;
 
 	kilo = 1000;
 	mega = 1000 * 1000;
